@@ -40,7 +40,18 @@ int comparisonForHuman(Human first, Human second, int k) {
     }
 }
 
-void QuickSort(int size, Human *humans) {
+void QuickSort(int size, Human *humans, int depth) {
+    if (depth >= 10000) {
+        for (int i = 1; i < size; i++) {
+            int j = i;
+            while (comparisonForHuman(humans[j], humans[j - 1], 0) < 0 && j > 0) {
+                Human t = humans[j];
+                humans[j] = humans[j - 1];
+                humans[j - 1] = t;
+                j--;
+            }
+        }
+    }
     if (size <= 1) return;
     Human x = humans[(size - 1) / 2];
     int i = 0, j = size - 1;
@@ -55,8 +66,8 @@ void QuickSort(int size, Human *humans) {
             j--;
         }
     }
-    if (j > 0) QuickSort(j + 1, humans);
-    if (size - 1 > i) QuickSort(size - j - 1, &humans[i]);
+    if (j > 0) QuickSort(j + 1, humans, depth + 1);
+    if (size - 1 > i) QuickSort(size - j - 1, &humans[i], depth + 1);
 }
 
 int main(int argc, char **argv) {
@@ -95,7 +106,7 @@ int main(int argc, char **argv) {
         printf("Not found output file exception");
         fclose(out);
     }
-    QuickSort(humans.pos,  humans.humans);
+    QuickSort(humans.pos,  humans.humans, 0);
     for (int i = 0; i < humans.pos; i++) {
         fprintf(out, "%s %s %s %s \n", humans.humans[i].data[0], humans.humans[i].data[1], humans.humans[i].data[2],
                 humans.humans[i].data[3]);
