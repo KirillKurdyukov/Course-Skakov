@@ -101,6 +101,8 @@ void QuickSort(long size, Human *humans) {
             }
         } while(lb < ub);
     } while (leftStack.pos != 0);
+    free(leftStack.stack);
+    free(rigthStack.stack);
 }
 
 int main(int argc, char **argv) {
