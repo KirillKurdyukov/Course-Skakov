@@ -7,15 +7,20 @@ typedef struct {
 } Human;
 
 typedef struct {
-    int pos;
-    int sizeMas;
+    long pos;
+    long sizeMas;
     Human *humans;
 } Humans;
+
+typedef struct {
+    long pos;
+    long sizeMas;
+    long* stack;
+} Stack;
 
 int push(Human human, Humans *humans) {
     if (humans->pos >= humans->sizeMas) {
         Human* temp = (Human *) realloc(humans->humans, 2 * humans->sizeMas * sizeof(Human));
-        free(humans->humans);
         if (temp == NULL) {
             printf("There was no unexpected error, please try again");
             return 0;
@@ -28,6 +33,22 @@ int push(Human human, Humans *humans) {
     return 1;
 }
 
+void pushForStack(long element, Stack* stack) {
+    if (stack->pos >= stack->sizeMas) {
+        long* temp = realloc(stack->stack, 2 * stack->sizeMas * sizeof(long));
+        if (temp == NULL) {
+            printf("There was no unexpected error, please try again");
+        }
+        stack->stack = (long *) temp;
+        stack->sizeMas *= 2;
+    }
+    stack->stack[stack->pos] = element;
+    stack->pos++;
+}
+
+long pop(Stack* stack) {
+    return stack->stack[--stack->pos];
+}
 // first < second!!!
 int comparisonForHuman(Human first, Human second, int k) {
     int a = strcmp(first.data[k], second.data[k]);
@@ -40,38 +61,50 @@ int comparisonForHuman(Human first, Human second, int k) {
     }
 }
 
-void QuickSort(int size, Human *humans, int depth) {
-    if (depth >= 10000) {
-        for (int i = 1; i < size; i++) {
-            int j = i;
-            while (comparisonForHuman(humans[j], humans[j - 1], 0) < 0 && j > 0) {
-                Human t = humans[j];
-                humans[j] = humans[j - 1];
-                humans[j - 1] = t;
-                j--;
+void QuickSort(long size, Human *humans) {
+    long lb, ub, stackPos = 1;
+    Stack leftStack = {0, 10};
+    Stack rigthStack = {0, 10};
+    leftStack.stack = malloc(leftStack.sizeMas * sizeof(long));
+    rigthStack.stack = malloc(rigthStack.sizeMas * sizeof(long));
+    pushForStack(0, &leftStack);
+    pushForStack(size - 1, &rigthStack);
+    do {
+        lb = pop(&leftStack);
+        ub = pop(&rigthStack);
+        do {
+            Human x = humans[(ub + lb) / 2];
+            int i = lb, j = ub;
+            while (i <= j) {
+                while (comparisonForHuman(humans[i], x, 0) < 0) i++;
+                while (comparisonForHuman(humans[j], x, 0) > 0) j--;
+                if (i <= j) {
+                    Human t = humans[i];
+                    humans[i] = humans[j];
+                    humans[j] = t;
+                    i++;
+                    j--;
+                }
             }
-        }
-    }
-    if (size <= 1) return;
-    Human x = humans[(size - 1) / 2];
-    int i = 0, j = size - 1;
-    while (i <= j) {
-        while (comparisonForHuman(humans[i], x, 0) < 0) i++;
-        while (comparisonForHuman(humans[j], x, 0) > 0) j--;
-        if (i <= j) {
-            Human t = humans[i];
-            humans[i] = humans[j];
-            humans[j] = t;
-            i++;
-            j--;
-        }
-    }
-    if (j > 0) QuickSort(j + 1, humans, depth + 1);
-    if (size - 1 > i) QuickSort(size - j - 1, &humans[i], depth + 1);
+            if (i < (ub + lb) / 2) {
+                if (i < ub) {
+                    pushForStack(i, &leftStack);
+                    pushForStack(ub, &rigthStack);
+                }
+                ub = j;
+            } else  {
+                if (j > lb) {
+                    pushForStack(lb, &leftStack);
+                    pushForStack(j, &rigthStack);
+                }
+                lb = i;
+            }
+        } while(lb < ub);
+    } while (leftStack.pos != 0);
 }
 
 int main(int argc, char **argv) {
-    if (argc != 2) {
+    if (argc != 3) {
         printf("There was no unexpected error, please try again");
         return 0;
     }
@@ -106,13 +139,14 @@ int main(int argc, char **argv) {
         printf("Not found output file exception");
         fclose(out);
     }
-    QuickSort(humans.pos,  humans.humans, 0);
-    for (int i = 0; i < humans.pos; i++) {
-        fprintf(out, "%s %s %s %s \n", humans.humans[i].data[0], humans.humans[i].data[1], humans.humans[i].data[2],
-                humans.humans[i].data[3]);
+    if (humans.pos != 0) {
+        QuickSort(humans.pos, humans.humans);
+        for (int i = 0; i < humans.pos; i++) {
+            fprintf(out, "%s %s %s %s\n", humans.humans[i].data[0], humans.humans[i].data[1], humans.humans[i].data[2],
+                    humans.humans[i].data[3]);
+        }
     }
     free(humans.humans);
     fclose(out);
     return 0;
 }
-
