@@ -16,52 +16,52 @@ double absolute(double a) {
     else return a;
 }
 
-_Bool pivoting(double **linSystem, size_t col, size_t row, int size) {
-    size_t maxLineIndex = col;
+_Bool pivoting(double **linSystem, size_t row, size_t col, int size) {
+    size_t maxLineIndex = row;
     double localMax = 0;
-    for (size_t i = col; i < size; i++) {
-        if (linSystem[i][row] > localMax) {
+    for (size_t i = row; i < size; i++) {
+        if (absolute(linSystem[i][col]) > localMax) {
             maxLineIndex = i;
-            localMax = linSystem[i][row];
+            localMax = linSystem[i][col];
         }
     }
     if (!localMax)
         return 0;
-    double *temp = linSystem[col];
-    linSystem[col] = linSystem[maxLineIndex];
+    double *temp = linSystem[row];
+    linSystem[row] = linSystem[maxLineIndex];
     linSystem[maxLineIndex] = temp;
     return 1;
 }
 
-void madeTriangularView(double **linSystem, size_t col, size_t row, int size) {
-    if (row < size && col < size && !linSystem[col][row])
+void madeTriangularView(double **linSystem, size_t row, size_t col, int size) {
+    if (row < size && col < size && !linSystem[row][col])
         return;
-    for (size_t i = col + 1; i < size; i++) {
-        double delta = linSystem[i][row] / linSystem[col][row];
-        for (size_t j = row; j < size + 1; j++)
-            linSystem[i][j] -= delta * linSystem[col][j];
+    for (size_t i = row + 1; i < size; i++) {
+        double delta = linSystem[i][col] / linSystem[row][col];
+        for (size_t j = col; j < size + 1; j++)
+            linSystem[i][j] -= delta * linSystem[row][j];
     }
 }
 
-_Bool checkIncompatibleLine(double **linSystem, size_t col, int size) {
+_Bool checkIncompatibleLine(double **linSystem, size_t row, int size) {
     for (int i = 0; i < size; i++) {
-        if (absolute(linSystem[col][i]) > eps)
+        if (absolute(linSystem[row][i]) > eps)
             return 0;
     }
-    if (absolute(linSystem[col][size]) <= eps)
+    if (absolute(linSystem[row][size]) <= eps)
         return 0;
     else return 1;
 }
 
-_Bool checkManySolution(double **linSystem, size_t col, int size) {
+_Bool checkManySolution(double **linSystem, size_t row, int size) {
     for (int i = 0; i < size; i++) {
-        if (absolute(linSystem[col][i]) > eps)
+        if (absolute(linSystem[row][i]) > eps)
             return 0;
     }
     return 1;
 }
 
-void madeDiagView(double **linSystem, size_t col, int size) {
+void madeDiagView(double **linSystem, int col, int size) {
     for (int i = col - 1; i >= 0; i--) {
         double delta = linSystem[i][col] / linSystem[col][col];
         linSystem[i][col] -= delta * linSystem[col][col];
@@ -70,22 +70,23 @@ void madeDiagView(double **linSystem, size_t col, int size) {
 }
 
 int gauss(double **linSystem, double *ans, int size) {
-    for (size_t col = 0, row = 0; col < size && row < size; col++) {
-        row = col;
-        while (!pivoting(linSystem, col, row, size) && row < size)
-            row++;
-        madeTriangularView(linSystem, col, row, size);
+    for (size_t col = 0, row = 0; col < size && row < size; row++) {
+        col = row;
+        while (!pivoting(linSystem, row, col, size) && col < size)
+            col++;
+        if (col < size)
+            madeTriangularView(linSystem, row, col, size);
     }
-    for (size_t col = 0; col < size; col++) {
-        if (checkIncompatibleLine(linSystem, col, size))
+    for (size_t row = 0; row < size; row++) {
+        if (checkIncompatibleLine(linSystem, row, size))
             return 0;
     }
-    for (size_t col = 0; col < size; col++) {
-        if (checkManySolution(linSystem, col, size))
+    for (size_t row = 0; row < size; row++) {
+        if (checkManySolution(linSystem, row, size))
             return 1;
     }
-    for (size_t col = size - 1; col > 0; col--) {
-        madeDiagView(linSystem, col, size);
+    for (int row = size - 1; row > 0; row--) {
+        madeDiagView(linSystem, row, size);
     }
     for (int i = 0; i < size; i++) {
         ans[i] = linSystem[i][size] / linSystem[i][i];
