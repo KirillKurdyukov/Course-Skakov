@@ -133,6 +133,9 @@ int main(int argc, char **argv) {
             fprintf(out, "%lf\n", ans[i]);
         }
     }
+    for (int i = 0; i < n; i++) {
+        free(linearSystem[i]);
+    }
     free(linearSystem);
     free(ans);
     fclose(out);
