@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-
-double eps = 1e-14;
+#define eps 1e-10
 
 void getMatrix(double **linSystem, int size) {
     for (int i = 0; i < size; i++) {
@@ -11,6 +10,7 @@ void getMatrix(double **linSystem, int size) {
         printf("\n");
     }
 }
+
 double absolute(double a) {
     if (a < 0) return -a;
     else return a;
