@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#define eps 1e-10
+#define eps 1e-15
 
 void getMatrix(double **linSystem, int size) {
     for (int i = 0; i < size; i++) {
