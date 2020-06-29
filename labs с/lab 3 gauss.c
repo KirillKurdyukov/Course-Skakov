@@ -16,7 +16,6 @@ _Bool pivoting(double **linSystem, size_t row, size_t col, int size) {
             localMax = linSystem[i][col];
         }
     }
-    printf("%i %i\n", row, col);
     if (localMax == eps)
         return 0;
     double *temp = linSystem[row];
