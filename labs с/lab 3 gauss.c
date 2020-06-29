@@ -1,15 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#define eps 1e-15
-
-void getMatrix(double **linSystem, int size) {
-    for (int i = 0; i < size; i++) {
-        for (int j = 0; j < size + 1; j++) {
-            printf("%lf ", linSystem[i][j]);
-        }
-        printf("\n");
-    }
-}
+#define eps 1e-10
 
 double absolute(double a) {
     if (a < 0) return -a;
@@ -18,14 +9,15 @@ double absolute(double a) {
 
 _Bool pivoting(double **linSystem, size_t row, size_t col, int size) {
     size_t maxLineIndex = row;
-    double localMax = 0;
+    double localMax = eps;
     for (size_t i = row; i < size; i++) {
         if (absolute(linSystem[i][col]) > localMax) {
             maxLineIndex = i;
             localMax = linSystem[i][col];
         }
     }
-    if (!localMax)
+    printf("%i %i\n", row, col);
+    if (localMax == eps)
         return 0;
     double *temp = linSystem[row];
     linSystem[row] = linSystem[maxLineIndex];
@@ -34,8 +26,6 @@ _Bool pivoting(double **linSystem, size_t row, size_t col, int size) {
 }
 
 void madeTriangularView(double **linSystem, size_t row, size_t col, int size) {
-    if (row < size && col < size && !linSystem[row][col])
-        return;
     for (size_t i = row + 1; i < size; i++) {
         double delta = linSystem[i][col] / linSystem[row][col];
         for (size_t j = col; j < size + 1; j++)
