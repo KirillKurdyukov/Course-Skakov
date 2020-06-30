@@ -153,6 +153,8 @@ int main(int argc, char **argv) {
         }
     }
     eps = fabs(maxMatrix - minMatrix) * 16 * FLT_EPSILON;
+    if (maxMatrix == minMatrix)
+        eps = 0.000001;
     fclose(in);
     FILE *out = fopen(argv[2], "w");
     if (!out) {
