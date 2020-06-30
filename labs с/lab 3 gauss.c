@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
-#define eps 1e-6
+#include <float.h>
+double eps; // Павел Сергеевич не бейте по голове сильно за глобальную переменную))
 
 void getMatrix(double **linSystem, int size) {
     for (int i = 0; i < size; i++) {
@@ -13,35 +14,16 @@ void getMatrix(double **linSystem, int size) {
     }
 }
 
-bool almostEqualRelative(double a, double b) {
-    double diff = fabs(a - b);
-    double left, right;
-    left = fabs(a);
-    right = fabs(b);
-    double largest = (right > left) ? right : left;
-    if (largest <= eps) {
-        if (diff <= eps)
-            return true;
-        else
-            return false;
-    } else {
-        if (diff <= eps * largest)
-            return true;
-        else
-            return false;
-    }
-}
-
 bool pivoting(double **linSystem, size_t row, size_t col, int size) {
     size_t maxLineIndex = row;
-    double localMax = eps;
+    double localMax = 0.0;
     for (size_t i = row; i < size; i++) {
         if (fabs(linSystem[i][col]) > localMax) {
             maxLineIndex = i;
-            localMax = linSystem[i][col];
+            localMax = fabs(linSystem[i][col]);
         }
     }
-    if (localMax == eps)
+    if (localMax <= eps)
         return false;
     double *temp = linSystem[row];
     linSystem[row] = linSystem[maxLineIndex];
@@ -49,22 +31,27 @@ bool pivoting(double **linSystem, size_t row, size_t col, int size) {
     return true;
 }
 
-void madeTriangularView(double **linSystem, size_t row, size_t col, int size) {
+bool madeTriangularView(double **linSystem, size_t row, size_t col, int size) {
     for (size_t i = row + 1; i < size; i++) {
         double delta = linSystem[i][col] / linSystem[row][col];
         for (size_t j = col; j < size + 1; j++)
             linSystem[i][j] -= delta * linSystem[row][j];
         bool checkZeroLine = true;
-        for (size_t j = col; j < size + 1; j++) {
-            if (fabs(linSystem[row][j] - linSystem[i][j]) > eps)
+        for (size_t j = col; j < size; j++) {
+            if (fabs(linSystem[i][j]) > eps)
                 checkZeroLine = false;
         }
         if (checkZeroLine) {
-            for (size_t j = col; j < size + 1; j++) {
-                linSystem[i][j] = 0;
+            if (fabs(linSystem[i][size]) > eps)
+                return true;
+        }
+        if (checkZeroLine) {
+            for (size_t j = 0; j < size + 1; j++) {
+                linSystem[i][j] = 0.0;
             }
         }
     }
+    return false;
 }
 
 bool checkIncompatibleLine(double **linSystem, size_t row, int size) {
@@ -99,8 +86,8 @@ int gauss(double **linSystem, double *ans, int size) {
         while (!pivoting(linSystem, row, col, size) && col < size)
             col++;
         if (col < size)
-            madeTriangularView(linSystem, row, col, size);
-        //  getMatrix(linSystem, size);
+            if(madeTriangularView(linSystem, row, col, size))
+                return 0;
     }
     for (size_t row = 0; row < size; row++) {
         if (checkIncompatibleLine(linSystem, row, size))
@@ -120,40 +107,52 @@ int gauss(double **linSystem, double *ans, int size) {
 }
 
 int main(int argc, char **argv) {
+    double minMatrix = DBL_MAX;
+    double maxMatrix = DBL_MIN;
     if (argc != 3) {
         printf("There was no unexpected error, please try again");
-        return 0;
+        return 1;
     }
     FILE *in = fopen(argv[1], "r");
     if (!in) {
         printf("Not found input file exception");
         fclose(in);
-        return 0;
+        return 1;
     }
     int n;
     fscanf(in, "%i", &n);
     double *ans = malloc(sizeof(double) * n);
     if (ans == NULL) {
         printf("Memory allocation error");
-        return 0;
+        fclose(in);
+        return 2;
     }
     double **linearSystem = malloc(sizeof(double *) * n);
     if (linearSystem == NULL) {
         printf("Memory allocation error");
-        return 0;
+        fclose(in);
+        return 2;
     }
     for (int i = 0; i < n; i++) {
         linearSystem[i] = malloc(sizeof(double) * (n + 1));
         if (linearSystem[i] == NULL) {
             printf("Memory allocation error");
-            return 0;
+            for (int j = i; j >= 0; j--)
+                free(linearSystem[j]);
+            fclose(in);
+            return 2;
         }
     }
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n + 1; j++) {
             fscanf(in, "%lf", &linearSystem[i][j]);
+            if (linearSystem[i][j] < minMatrix)
+                minMatrix = linearSystem[i][j];
+            if (linearSystem[i][j] > maxMatrix)
+                maxMatrix = linearSystem[i][j];
         }
     }
+    eps = fabs(maxMatrix - minMatrix) * 16 * FLT_EPSILON;
     fclose(in);
     FILE *out = fopen(argv[2], "w");
     if (!out) {
