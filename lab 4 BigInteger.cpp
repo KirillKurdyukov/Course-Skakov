@@ -11,7 +11,7 @@ private:
     bool isNegative{};
     std::vector<int> num;
 public:
-    BigInteger(std::string number) {
+    explicit BigInteger(std::string number) {
         if (number[0] == '-') {
             isNegative = true;
             for (size_t i = number.size() - 1; i > 0; i--)
@@ -21,9 +21,12 @@ public:
             for (int i = number.size() - 1; i >= 0; i--)
                 num.push_back(number[i] - 48);
         }
+        this->clearZero();
     }
 
-    BigInteger(bool _isNegative, std::vector<int> _num) : isNegative(_isNegative), num(std::move(_num)) {}
+    BigInteger(bool _isNegative, std::vector<int> _num) : isNegative(_isNegative), num(std::move(_num)) {
+        this->clearZero();
+    }
 
     std::vector<int> getNumber() const {
         return num;
@@ -90,9 +93,7 @@ public:
     }
 
     // a.comparator(b) a > b return 1, a == b return 0, a < b return -1;
-    int comparator(BigInteger &number) {
-        number.clearZero();
-        this->clearZero();
+    int comparator(const BigInteger &number) const {
         if (!this->isNegative && !number.isNegate()) {
             if (this->num.size() > number.getNumber().size())
                 return 1;
@@ -120,7 +121,7 @@ public:
         return BigInteger(!this->isNegative, this->num);
     }
 
-    BigInteger add(BigInteger &number) {
+    BigInteger add(const BigInteger &number) const {
         std::vector<int> newObject;
         int prev = 0;
         if (!(number.isNegate() ^ this->isNegative)) {
@@ -193,14 +194,13 @@ public:
         }
     }
 
-    BigInteger subtract(BigInteger &number) {
+    BigInteger subtract(const BigInteger &number) const {
         if (this->comparator(number) == 0)
             return BigInteger(false, {0});
-        BigInteger temp(!number.isNegate(), number.getNumber());
-        return this->add(temp);
+        return this->add(number.negate());
     }
 
-    BigInteger multiply(const BigInteger &number) {
+    BigInteger multiply(const BigInteger &number) const {
         BigInteger ans = {false, {0}};
         std::vector<int> temp = this->num;
         for (int i = 0; i < number.getNumber().size(); i++) {
@@ -212,8 +212,7 @@ public:
             }
             if (prev)
                 newObject.push_back(prev);
-            BigInteger cnt(false, newObject);
-            ans = ans.add(cnt);
+            ans = ans.add({false, newObject});
             reverse(temp.begin(), temp.end());
             temp.push_back(0);
             reverse(temp.begin(), temp.end());
@@ -221,16 +220,14 @@ public:
         return BigInteger(number.isNegate() ^ this->isNegative, ans.getNumber());
     }
 
-    BigInteger divide(BigInteger &number) {
+    BigInteger divide(const BigInteger& number) const {
         BigInteger temp = this->abs();
         if (temp.comparator(number) == -1)
             return {false, {0}};
-        BigInteger cnt = number.abs();
-        if (temp.comparator(cnt) == 0)
+        if (temp.comparator(number.abs()) == 0)
             return BigInteger(number.isNegate() ^ this->isNegative, {1});
-        cnt = {false, {0}};
-        if (number.comparator(cnt) == 0) {
-            return true;
+        if (number.comparator({false, {0}}) == 0) {
+            return BigInteger(true);
         }
         BigInteger ans = {false, {0}};
         while (temp.comparator(number) >= 0) {
@@ -241,8 +238,7 @@ public:
                     ranks.push_back(temp.getNumber()[j]);
                 }
                 for (int k = 9; k > 0; k--) {
-                    cnt = BigInteger(false, {k}).multiply(number);
-                    if (BigInteger(false, ranks).comparator(cnt) >= 0) {
+                    if (BigInteger(false, ranks).comparator(BigInteger(false, {k}).multiply(number)) >= 0) {
                         iterationDone = true;
                         ranks = BigInteger(false, {k}).multiply(number).getNumber();
                         reverse(ranks.begin(), ranks.end());
@@ -252,11 +248,11 @@ public:
                             newObject.push_back(0);
                         }
                         newObject.push_back(k);
-                        BigInteger t = {false, newObject};
-                        ans = ans.add(t);
+                        ans = ans.add({false, newObject});
                         reverse(ranks.begin(), ranks.end());
                         BigInteger cur = {false, ranks};
                         temp = temp.subtract(cur);
+                        temp.clearZero();
                     }
                     if (iterationDone)
                         break;
@@ -268,24 +264,23 @@ public:
         return BigInteger(number.isNegate() ^ this->isNegative, ans.getNumber());
     }
 
-    BigInteger mod(BigInteger &number) {
+    BigInteger mod(const BigInteger &number) const {
         BigInteger temp(number.multiply(this->divide(number)));
         return this->subtract(temp);
     }
 
-    BigInteger sqrt() {
+    BigInteger sqrt() const {
         BigInteger a = {false, {0}};
         BigInteger b = {false, {1}};
         if (this->comparator(a) == -1) {
-            return true;
+            return BigInteger(true);
         }
         if (this->comparator(a) == 0 || this->comparator(b) == 0)
             return {this->isNegative, this->num};
         BigInteger l = BigInteger(false, {0}); // множество чисел меньше корня
         BigInteger r = BigInteger({false, this->num}); // множество чисел больше корня
         while (r.subtract(l).comparator(b) > 0) {
-            BigInteger cnt = {false, {2}};
-            BigInteger temp = r.subtract(l).divide(cnt).add(l);
+            BigInteger temp = r.subtract(l).divide({false, {2}}).add(l);
             if (temp.multiply(temp).comparator(*this) <= 0)
                 l = temp;
             if (temp.multiply(temp).comparator(*this) > 0)
@@ -294,7 +289,7 @@ public:
         return l;
     }
 
-    BigInteger (int number) {
+    explicit BigInteger (int number) {
         isNegative = number < 0;
         if (number == 0)
             num.push_back(0);
@@ -304,28 +299,28 @@ public:
         }
     }
 
-    BigInteger(bool NaN) : isNaN(NaN) {}
+    explicit BigInteger(bool NaN) : isNaN(NaN) {}
 
     BigInteger() = default;
 };
 
-BigInteger operator+(BigInteger &a, BigInteger &b) {
+BigInteger operator+(const BigInteger &a, const BigInteger &b) {
     return a.add(b);
 }
 
-BigInteger operator-(BigInteger &a, BigInteger &b) {
+BigInteger operator-(const BigInteger &a, const BigInteger &b) {
     return a.subtract(b);
 }
 
-BigInteger operator*(BigInteger &a, BigInteger &b) {
+BigInteger operator*(const BigInteger &a, const BigInteger &b) {
     return a.multiply(b);
 }
 
-BigInteger operator/(BigInteger &a, BigInteger &b) {
+BigInteger operator/(const BigInteger &a, const BigInteger &b) {
     return a.divide(b);
 }
 
-BigInteger operator%(BigInteger &a, BigInteger &b) {
+BigInteger operator%(const BigInteger &a, const BigInteger &b) {
     return a.mod(b);
 }
 
@@ -334,43 +329,32 @@ std::ostream &operator<<(std::ofstream &out, const BigInteger &number) {
     return out;
 }
 
-int operator>(BigInteger &a, BigInteger &b) {
-    if (a.comparator(b) == 1)
-        return 1;
-    else return 0;
+bool operator>(const BigInteger &a, const BigInteger &b) {
+    return a.comparator(b) == 1;
 }
 
-int operator<(BigInteger &a, BigInteger &b) {
-    if (a.comparator(b) == -1)
-        return 1;
-    else return 0;
+bool operator<(const BigInteger &a, const BigInteger &b) {
+    return a.comparator(b) == -1;
 }
 
-int operator==(BigInteger &a, BigInteger &b) {
-    if (a.comparator(b) == 0)
-        return 1;
-    else return 0;
+bool operator==(const BigInteger &a, const BigInteger &b) {
+    return a.comparator(b) == 0;
 }
 
-int operator!=(BigInteger &a, BigInteger &b) {
-    if (a.comparator(b) != 0)
-        return 1;
-    else return 0;
+bool operator!=(const BigInteger &a, const BigInteger &b) {
+    return a.comparator(b) != 0;
 }
 
-int operator>=(BigInteger &a, BigInteger &b) {
-    if (a.comparator(b) >= 0)
-        return 1;
-    else return 0;
+bool operator>=(const BigInteger &a, const BigInteger &b) {
+    return a.comparator(b) >= 0;
 }
 
-int operator<=(BigInteger &a, BigInteger &b) {
-    if (a.comparator(b) <= 0)
-        return 1;
-    else return 0;
+bool operator<=(const BigInteger &a, const BigInteger &b) {
+    return a.comparator(b) <= 0;
+
 }
 
-BigInteger sqrt(BigInteger &a) {
+BigInteger sqrt(const BigInteger &a) {
     return a.sqrt();
 }
 
@@ -415,22 +399,22 @@ int main(int argc, char **argv) {
                 break;
         }
         if (operation == ">") {
-            out << BigInteger(a > b);
+            out << (a > b);
         }
         if (operation == "<") {
-            out << BigInteger(a < b);
+            out << (a < b);
         }
         if (operation == "<=") {
-            out << BigInteger(a <= b);
+            out << (a <= b);
         }
         if (operation == ">=") {
-            out << BigInteger(a >= b);
+            out << (a >= b);
         }
         if (operation == "==") {
-            out << BigInteger(a == b);
+            out << (a == b);
         }
         if (operation == "!=") {
-            out << BigInteger(a != b);
+            out << (a != b);
         }
     } else {
         out << sqrt(a);
